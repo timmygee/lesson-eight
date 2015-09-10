@@ -5,7 +5,9 @@ from django.conf import settings
 
 class Client(models.Model):
     name = models.CharField(max_length=200)
-    author = models.ForeignKey(settings.AUTH_USER_MODEL)
+    # author ForeignKey field has null=True to allow db migration to work with
+    # existing data
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
 
     def __str__(self):
         return self.name
@@ -14,7 +16,9 @@ class Client(models.Model):
 class Project(models.Model):
     client = models.ForeignKey('Client', blank=True, null=True)
     name = models.CharField(max_length=200)
-    author = models.ForeignKey(settings.AUTH_USER_MODEL)
+    # author ForeignKey field has null=True to allow db migration to work with
+    # existing data
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
 
     def __str__(self):
         return '<{}> {}'.format(self.client, self.name)
@@ -26,7 +30,9 @@ class Entry(models.Model):
     stop = models.DateTimeField(blank=True, null=True)
     project = models.ForeignKey('Project')
     description = models.CharField(max_length=200)
-    author = models.ForeignKey(settings.AUTH_USER_MODEL)
+    # author ForeignKey field has null=True to allow db migration to work with
+    # existing data
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
 
     class Meta:
         verbose_name_plural = 'entries'

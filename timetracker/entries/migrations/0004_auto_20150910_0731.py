@@ -16,19 +16,16 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='client',
             name='author',
-            field=models.ForeignKey(to=settings.AUTH_USER_MODEL, default=None),
-            preserve_default=False,
+            field=models.ForeignKey(to=settings.AUTH_USER_MODEL, null=True),
         ),
         migrations.AddField(
             model_name='entry',
             name='author',
-            field=models.ForeignKey(to=settings.AUTH_USER_MODEL, default=None),
-            preserve_default=False,
+            field=models.ForeignKey(to=settings.AUTH_USER_MODEL, null=True),
         ),
         migrations.AddField(
             model_name='project',
             name='author',
-            field=models.ForeignKey(to=settings.AUTH_USER_MODEL, default=None),
-            preserve_default=False,
+            field=models.ForeignKey(to=settings.AUTH_USER_MODEL, null=True),
         ),
     ]

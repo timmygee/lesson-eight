@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import CreateView, RedirectView, UpdateView
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 
 from .forms import ClientForm, EntryForm, ProjectForm
 from .models import Client, Entry, Project
@@ -75,8 +76,13 @@ class EntryCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super(EntryCreateView, self).get_context_data(**kwargs)
         # Limit the entries listed to just the ones the currently logged in user
-        # has created
-        context['entry_list'] = Entry.objects.filter(author=self.request.user)
+        # has created.
+        # "Q" objects allow us to perform an OR operation between filter 
+        # criteria. In this case we allow all users to view items where the 
+        # author field has not been set. There may be data that has 
+        # author == None from before the author field was added.
+        context['entry_list'] = (Entry.objects
+            .filter(Q(author=self.request.user)|Q(author__isnull=True))
         return context
 
     def form_valid(self, form):
