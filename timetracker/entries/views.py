@@ -1,50 +1,28 @@
 from django.core.urlresolvers import reverse_lazy
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import CreateView, RedirectView, UpdateView
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
 
 from .forms import ClientForm, EntryForm, ProjectForm
 from .models import Client, Entry, Project
 
 
-def clients(request):
+class LoginRequiredMixin:
     """
-    Deprecated by ClientCreateView below
+    Mixin to apply login_required decorator to the dispatch method of multiple
+    class based views.
+
+    Mixin order matters and as all class based views implement a dispatch method
+    this mixin must be given a higher precedence than the generic CBV class
     """
-    if request.method == 'POST':
-        # Create our form object with our POST data
-        form = ClientForm(request.POST)
-        if form.is_valid():
-            # If the form is valid, create a client with submitted data
-            # Below is the shortcut equivalent of:
-            #
-            #   client = Client()
-            #   client.name = form.cleaned_data['name']
-            #   client.save()
-            #
-            # A shorter way to do create an object, including saving, is:
-            #
-            #   Client.objects.create(name=form.cleaned_data['name'])
-            #
-            # Sometimes you don't want to save the object until the end,
-            # sometimes you don't care!
-            #
-            # Since the form is a ModelForm, you can just call `save()`.
-            form.save()
-            return redirect('client-list')
-    else:
-        form = ClientForm()
-
-    client_list = Client.objects.all()
-    return render(request, 'clients.html', {
-        'client_list': client_list,
-        'form': form,
-    })
+    @method_decorator(login_required)
+    def dispatch(self, *args, **kwargs):
+        return super(LoginRequiredMixin, self).dispatch(*args, **kwargs)
 
 
-class ClientCreateView(CreateView):
+class ClientCreateView(LoginRequiredMixin, CreateView):
     """
-    CBV version of above "clients" view function
-
     This view has a form for creating new clients. It also displays a list of
     clients. We could have used ListView for the latter part but then we
     wouldn't have the form handling of CreateView. It could be possible to mix
@@ -66,70 +44,28 @@ class ClientCreateView(CreateView):
         context['client_list'] = Client.objects.all()
         return context
 
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super(ClientCreateView, self).form_valid(form)
 
-def client_detail(request, pk):
+
+class ClientUpdateView(LoginRequiredMixin, UpdateView):
     """
-    Deprecated by ClientUpdateView below
-    """
-    client = get_object_or_404(Client, pk=pk)
-
-    if request.method == 'POST':
-        form = ClientForm(request.POST)
-        if form.is_valid():
-            # Update client details
-            client.name = form.cleaned_data['name']
-            client.save()
-            return redirect('client-list')
-    else:
-        # Initialise form with client data
-        form = ClientForm(initial={'name': client.name})
-
-    return render(request, 'client_detail.html', {
-        'client': client,
-        'form': form,
-    })
-
-
-class ClientUpdateView(UpdateView):
-    """
-    CBV version of above "client_detail" view function
+    CBV version of "client_detail" view function
     """
     model = Client
     form_class = ClientForm
     template_name = 'client_detail.html'
     success_url = reverse_lazy('client-list')
 
+    def get_queryset(self):
+        qs = super(ClientUpdateView, self).get_queryset()
+        return qs.filter(author=self.request.user)
 
-def entries(request):
+
+class EntryCreateView(LoginRequiredMixin, CreateView):
     """
-    Deprecated by EntryCreateView below
-    """
-    if request.method == 'POST':
-        # Create our form object with our POST data
-        entry_form = EntryForm(request.POST)
-        if entry_form.is_valid():
-            # If the form is valid, let's create and Entry with the submitted
-            # data
-            entry = Entry()
-            entry.start = entry_form.cleaned_data['start']
-            entry.stop = entry_form.cleaned_data['stop']
-            entry.project = entry_form.cleaned_data['project']
-            entry.description = entry_form.cleaned_data['description']
-            entry.save()
-            return redirect('entry-list')
-    else:
-        entry_form = EntryForm()
-
-    entry_list = Entry.objects.all()
-    return render(request, 'entries.html', {
-        'entry_list': entry_list,
-        'entry_form': entry_form,
-    })
-
-
-class EntryCreateView(CreateView):
-    """
-    CBV version of above "entries" view function
+    CBV version of "entries" view function
     """
     model = Entry
     form_class = EntryForm
@@ -138,36 +74,19 @@ class EntryCreateView(CreateView):
 
     def get_context_data(self, **kwargs):
         context = super(EntryCreateView, self).get_context_data(**kwargs)
-        context['entry_list'] = Entry.objects.all()
+        # Limit the entries listed to just the ones the currently logged in user
+        # has created
+        context['entry_list'] = Entry.objects.filter(author=self.request.user)
         return context
 
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super(EntryCreateView, self).form_valid(form)
 
-def projects(request):
+
+class ProjectCreateView(LoginRequiredMixin, CreateView):
     """
-    Deprecated by ProjectCreateView below
-    """
-    if request.method == 'POST':
-        # Create our form object with our POST data
-        form = ProjectForm(request.POST)
-        if form.is_valid():
-            Project.objects.create(
-                name=form.cleaned_data['name'],
-                client=form.cleaned_data['client']
-            )
-            return redirect('project-list')
-    else:
-        form = ProjectForm()
-
-    project_list = Project.objects.all()
-    return render(request, 'projects.html', {
-        'project_list': project_list,
-        'form': form
-    })
-
-
-class ProjectCreateView(CreateView):
-    """
-    CBV version of above "projects" view function
+    CBV version of "projects" view function
     """
     model = Project
     form_class = ProjectForm
@@ -179,43 +98,23 @@ class ProjectCreateView(CreateView):
         context['project_list'] = Project.objects.all()
         return context
 
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super(ProjectCreateView, self).form_valid(form)
 
-def project_detail(request, pk):
+
+class ProjectUpdateView(LoginRequiredMixin, UpdateView):
     """
-    Deprecated by ProjectUpdateView below
-    """
-    project = get_object_or_404(Project, pk=pk)
-
-    if request.method == 'POST':
-        form = ProjectForm(request.POST)
-        if form.is_valid():
-            # Update project details
-            project.name = form.cleaned_data['name']
-            project.client = form.cleaned_data['client']
-            project.save()
-            return redirect('project-list')
-    else:
-        # Initialise form with project data
-        form = ProjectForm(initial={
-            'name': project.name,
-            'client': project.client
-        })
-
-    project = get_object_or_404(Project, pk=pk)
-    return render(request, 'project_detail.html', {
-        'project': project,
-        'form': form,
-    })
-
-
-class ProjectUpdateView(UpdateView):
-    """
-    CBV version of above "project_detail" view function
+    CBV version of "project_detail" view function
     """
     model = Project
     form_class = ProjectForm
     template_name = 'project_detail.html'
     success_url = reverse_lazy('project-list')
+
+    def get_queryset(self):
+        qs = super(ProjectUpdateView, self).get_queryset()
+        return qs.filter(author=self.request.user)
 
 
 class ClientRedirectView(RedirectView):

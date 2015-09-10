@@ -13,7 +13,9 @@
     {% for client in client_list %}
       <li class="list-group-item">
         <a href="{% url 'client-detail' pk=client.pk %}">{{ client.name }}</a>
-        <a class="btn btn-warning btn-xs pull-right" href="{% url 'client-detail' pk=client.pk %}">Edit</a>
+        {% if client.author == request.user %}
+          <a class="btn btn-warning btn-xs pull-right" href="{% url 'client-detail' pk=client.pk %}">Edit</a>
+        {% endif %}
       </li>
     {% endfor %}
   </ul>
