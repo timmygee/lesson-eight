@@ -82,7 +82,7 @@ class EntryCreateView(LoginRequiredMixin, CreateView):
         # author field has not been set. There may be data that has 
         # author == None from before the author field was added.
         context['entry_list'] = (Entry.objects
-            .filter(Q(author=self.request.user)|Q(author__isnull=True))
+            .filter(Q(author=self.request.user)|Q(author__isnull=True)))
         return context
 
     def form_valid(self, form):
